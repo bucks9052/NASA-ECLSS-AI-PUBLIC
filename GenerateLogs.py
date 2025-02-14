@@ -9,12 +9,32 @@ subsystems = ['Oxygen Generator', 'CO2 Scrubber', 'Airlock', 'Water Processor']
 # Log levels
 alarm_levels = ['Normal', 'Watch', 'Minor Fault', 'Emergency']
 
+# Initialize sensor history for rolling averages
+sensor_history = {subsystem: random.uniform(80, 120) for subsystem in subsystems}
+
 def generate_log_entry():
     subsystem = random.choice(subsystems)
-    # Random sensor value (simulate fault with 10% probability of out-of-range values)
-    sensor_value = random.uniform(50, 150) if random.random() > 0.1 else random.uniform(150, 300)
+    
+    # Introduce rolling average: New value depends on previous ones
+    previous_value = sensor_history[subsystem]
+    drift = random.uniform(-5, 5)  # Small normal fluctuations
+    sensor_value = previous_value + drift  
+
+    # Simulate occasional spikes (10% probability)
+    if random.random() < 0.1:
+        sensor_value *= random.choice([1.5, 2])  # Sudden spike
+    elif random.random() < 0.05:
+        sensor_value *= 0.5  # Sudden drop
+
+    # Clip values to realistic bounds
+    sensor_value = max(50, min(sensor_value, 300))
+
+    # Update rolling average (simple moving average)
+    sensor_history[subsystem] = (sensor_history[subsystem] * 0.9) + (sensor_value * 0.1)
+
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    # Alarm levels based on the sensor value
+
+    # Assign Alarm Levels
     if sensor_value <= 100:
         alarm_level = 'Normal'
     elif 100 < sensor_value <= 125:
@@ -24,7 +44,7 @@ def generate_log_entry():
     else:
         alarm_level = 'Emergency'
 
-    return [subsystem, sensor_value, timestamp, alarm_level]
+    return [subsystem, round(sensor_value, 2), timestamp, alarm_level]
 
 # Generate logs
 def generate_logs(num_entries=100):
